@@ -7,22 +7,29 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Settings } from "lucide-react"
 import type { DLPData } from "../hooks/useDLPData"
-import { AVAILABLE_METRICS } from "../hooks/useDLPData"
 
 interface CustomMetricCardProps {
   data: DLPData[]
   loading: boolean
 }
 
+const METRICS = [
+  { key: "score", label: "Total Score" },
+  { key: "uniqueDatapoints", label: "Contributors" },
+  { key: "rewardAmount", label: "Rewards" },
+  { key: "tradingVolume", label: "Trading Volume" },
+  { key: "dataAccessFees", label: "Data Access Fees" },
+] as const
+
 export function CustomMetricCard({ data, loading }: CustomMetricCardProps) {
-  const [selectedMetric, setSelectedMetric] = useState(AVAILABLE_METRICS[3].key) // Default to totalRewards
+  const [selectedMetric, setSelectedMetric] = useState<string>("score")
 
   if (loading) {
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Custom Metric</CardTitle>
-          <Settings className="w-5 h-5" />
+          <Settings className="w-4 h-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -39,24 +46,29 @@ export function CustomMetricCard({ data, loading }: CustomMetricCardProps) {
     )
   }
 
-  const selectedMetricConfig = AVAILABLE_METRICS.find((m) => m.key === selectedMetric)!
-
-  // Sort data by the selected metric
-  const sortedData = [...data].sort((a, b) => {
-    const aVal = a[selectedMetric as keyof DLPData] as number
-    const bVal = b[selectedMetric as keyof DLPData] as number
-
-    // For rank, lower is better
-    if (selectedMetric === "rank") {
-      return aVal - bVal
+  const formatValue = (value: any, metricKey: string) => {
+    if (typeof value === "number") {
+      if (metricKey === "uniqueDatapoints") {
+        if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`
+        if (value >= 1000) return `${(value / 1000).toFixed(1)}K`
+        return value.toString()
+      }
+      if (metricKey === "score") {
+        return value.toFixed(4)
+      }
+      return value.toString()
     }
-    // For response time, lower is better
-    if (selectedMetric === "avgResponseTime") {
-      return aVal - bVal
+    if (typeof value === "string") {
+      const numValue = Number.parseFloat(value)
+      if (!isNaN(numValue)) {
+        if (metricKey === "rewardAmount" || metricKey === "tradingVolume" || metricKey === "dataAccessFees") {
+          return `${numValue.toFixed(4)} VANA`
+        }
+        return numValue.toFixed(4)
+      }
     }
-    // For everything else, higher is better
-    return bVal - aVal
-  })
+    return value
+  }
 
   const getBadgeVariant = (index: number) => {
     if (index === 0) return "default"
@@ -64,20 +76,35 @@ export function CustomMetricCard({ data, loading }: CustomMetricCardProps) {
     return "outline"
   }
 
+  // Sort data by selected metric
+  const sortedData = [...data].sort((a, b) => {
+    const aVal =
+      typeof a[selectedMetric as keyof DLPData] === "string"
+        ? Number.parseFloat(a[selectedMetric as keyof DLPData] as string) || 0
+        : (a[selectedMetric as keyof DLPData] as number) || 0
+    const bVal =
+      typeof b[selectedMetric as keyof DLPData] === "string"
+        ? Number.parseFloat(b[selectedMetric as keyof DLPData] as string) || 0
+        : (b[selectedMetric as keyof DLPData] as number) || 0
+    return bVal - aVal
+  })
+
+  const selectedMetricLabel = METRICS.find((m) => m.key === selectedMetric)?.label || "Score"
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Custom Metric</CardTitle>
-        <Settings className="w-5 h-5" />
+        <CardTitle className="text-sm font-medium">Top by {selectedMetricLabel}</CardTitle>
+        <Settings className="w-4 h-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-3">
           <Select value={selectedMetric} onValueChange={setSelectedMetric}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {AVAILABLE_METRICS.map((metric) => (
+              {METRICS.map((metric) => (
                 <SelectItem key={metric.key} value={metric.key}>
                   {metric.label}
                 </SelectItem>
@@ -85,16 +112,14 @@ export function CustomMetricCard({ data, loading }: CustomMetricCardProps) {
             </SelectContent>
           </Select>
 
-          <div className="space-y-3">
-            {sortedData.slice(0, 3).map((dlp, index) => (
-              <div key={dlp.id} className="flex items-center justify-between">
-                <span className="text-sm font-medium">{dlp.name}</span>
-                <Badge variant={getBadgeVariant(index)}>
-                  {selectedMetricConfig.format(dlp[selectedMetric as keyof DLPData] as number)}
-                </Badge>
-              </div>
-            ))}
-          </div>
+          {sortedData.slice(0, 3).map((dlp, index) => (
+            <div key={dlp.id} className="flex items-center justify-between">
+              <span className="text-sm font-medium">{dlp.name}</span>
+              <Badge variant={getBadgeVariant(index)}>
+                {formatValue(dlp[selectedMetric as keyof DLPData], selectedMetric)}
+              </Badge>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>

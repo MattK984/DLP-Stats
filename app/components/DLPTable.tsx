@@ -61,6 +61,7 @@ export function DLPTable({ data, loading }: DLPTableProps) {
             <TableHead className="text-right">Contributors</TableHead>
             <TableHead className="text-right">Trading Volume</TableHead>
             <TableHead className="text-right">Rewards</TableHead>
+            <TableHead className="text-right">Penalties</TableHead>
             <TableHead className="text-right">DLP ID</TableHead>
             <TableHead></TableHead>
           </TableRow>
@@ -131,9 +132,17 @@ export function DLPTable({ data, loading }: DLPTableProps) {
                 {Number.parseFloat(dlp.tradingVolume).toFixed(4)} VANA
               </TableCell>
               <TableCell className="text-right font-mono text-sm">
-                <span className="text-green-600">+{Number.parseFloat(dlp.rewardAmount).toFixed(4)}</span>
-                {Number.parseFloat(dlp.penaltyAmount) > 0 && (
-                  <span className="text-red-600 block">-{Number.parseFloat(dlp.penaltyAmount).toFixed(4)}</span>
+                <span className="text-green-600">
+                  {dlp.rewardAmount === "error" ? "Error" : `+${Number.parseFloat(dlp.rewardAmount).toFixed(4)}`}
+                </span>
+              </TableCell>
+              <TableCell className="text-right font-mono text-sm">
+                {Number.parseFloat(dlp.penaltyAmount) > 0 ? (
+                  <span className="text-red-600">
+                    {dlp.penaltyAmount === "error" ? "Error" : `-${Number.parseFloat(dlp.penaltyAmount).toFixed(4)}`}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
                 )}
               </TableCell>
               <TableCell className="text-right font-mono text-sm text-muted-foreground">{dlp.id}</TableCell>
